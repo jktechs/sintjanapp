@@ -1,0 +1,85 @@
+@use '@angular/material' as mat;
+@include mat.core();
+// Define a dark theme
+$dark-theme: mat.define-dark-theme((
+ color: (
+   primary: mat.define-palette(mat.$pink-palette),
+   accent: mat.define-palette(mat.$blue-grey-palette),
+   warn: mat.define-palette(mat.$red-palette),
+ ),
+  // Only include `typography` and `density` in the default dark theme.
+  typography: mat.define-typography-config(),
+));
+// Define a light theme
+$light-theme: mat.define-light-theme((
+ color: (
+   primary: mat.define-palette(mat.$indigo-palette),
+   accent: mat.define-palette(mat.$pink-palette),
+   warn: mat.define-palette(mat.$red-palette),
+ ),
+));
+ 
+// Apply the dark theme by default
+@include mat.core-color($dark-theme);
+@include mat.card-color($dark-theme);
+@include mat.form-field-color($dark-theme);
+@include mat.input-color($dark-theme);
+@include mat.chips-color($dark-theme);
+@include mat.list-color($dark-theme);
+@include mat.tabs-color($dark-theme);
+@include mat.checkbox-color($dark-theme);
+@include mat.button-color($dark-theme);
+@include mat.datepicker-color($dark-theme);
+@include mat.divider-color($dark-theme);
+
+@include mat.icon-button-color($dark-theme);
+@include mat.fab-color($dark-theme);
+
+@include mat.core-typography($dark-theme);
+@include mat.card-typography($dark-theme);
+@include mat.form-field-typography($dark-theme);
+@include mat.input-typography($dark-theme);
+@include mat.chips-typography($dark-theme);
+@include mat.list-typography($dark-theme);
+@include mat.tabs-typography($dark-theme);
+@include mat.checkbox-typography($dark-theme);
+@include mat.button-typography($dark-theme);
+@include mat.datepicker-typography($dark-theme);
+@include mat.divider-typography($dark-theme);
+
+@include mat.icon-button-typography($dark-theme);
+@include mat.fab-typography($dark-theme);
+//@include mat.all-component-themes($dark-theme);
+//@include mat.button-theme($dark-theme);
+// Apply the light theme only when the user prefers light themes.
+@media (prefers-color-scheme: light) {
+ // Use the `-color` mixins to only apply color styles without reapplying the same
+ // typography and density styles.
+  body {
+    background-color: lightgray;
+    color: black;
+  }
+  //@include mat.all-component-colors($light-theme);
+  //@include mat.button-theme($light-theme);
+
+  @include mat.core-color($light-theme);
+  @include mat.card-color($light-theme);
+  @include mat.form-field-color($light-theme);
+  @include mat.input-color($light-theme);
+  @include mat.chips-color($light-theme);
+  @include mat.list-color($light-theme);
+  @include mat.tabs-color($light-theme);
+  @include mat.checkbox-color($light-theme);
+  @include mat.button-color($light-theme);
+  @include mat.datepicker-color($light-theme);
+  @include mat.divider-color($light-theme);
+
+  @include mat.icon-button-color($light-theme);
+  @include mat.fab-color($light-theme);
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #35363a;
+    color: white;
+  }
+}

@@ -1,0 +1,18 @@
+<mat-tab-group
+    style="height: 100%; flex-grow: 1"
+    [mat-stretch-tabs]="stretch"
+    [attr.mat-align-tabs]="align"
+    animationDuration="350ms"
+    headerPosition="below"
+    [(selectedIndex)]="selected.value.id"
+    (focusChange)="select({ id: $event.index })"
+>
+    <ng-container *ngFor="let item of items">
+        <mat-tab *ngIf="isVisible(item.appNavPage.id)">
+            <ng-template mat-tab-label>
+                <mat-icon>{{ item.appNavPage.icon }}</mat-icon>
+            </ng-template>
+            <ng-container [ngTemplateOutlet]="item.ref"></ng-container>
+        </mat-tab>
+    </ng-container>
+</mat-tab-group>

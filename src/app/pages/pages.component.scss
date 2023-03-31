@@ -1,0 +1,11 @@
+div.mdc-tab {
+    height: 7vh !important;
+    padding: 0px;
+    min-width: 15%;
+}
+mat-tab-body {
+flex-grow: 1;
+}
+.mat-mdc-tab-body-wrapper{
+    height: 100% !important;
+}
