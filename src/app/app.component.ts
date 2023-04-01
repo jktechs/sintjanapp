@@ -1,16 +1,18 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterContentChecked, Component, ElementRef, EventEmitter, Injectable, ViewChild } from '@angular/core';
+import { AfterContentChecked, Component, ElementRef, EventEmitter, Injectable, ViewChild, Inject, ViewContainerRef } from '@angular/core';
 import { AbstractControl, FormControl, FormGroupDirective, NgForm, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { DateAdapter, ErrorStateMatcher, MatRipple, MAT_DATE_LOCALE, NativeDateAdapter } from '@angular/material/core';
 import { App } from '@capacitor/app';
 import { Homework, JSONObject, Lesson, Location, Savable, setVar, Subject } from 'src/lib/Utils';
-import { bijlage, huiswerkResult, Somtoday, Vak } from 'src/lib/Somtoday';
+import { huiswerkResult, Somtoday, Vak } from 'src/lib/Somtoday';
 import { AppLauncher } from '@capacitor/app-launcher';
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { Browser } from '@capacitor/browser';
 import { MatDateRangeSelectionStrategy, DateRange, MAT_DATE_RANGE_SELECTION_STRATEGY } from '@angular/material/datepicker';
 import { PageComponent, Page, LayoutType } from './pages/pages.component';
 import { Preferences } from '@capacitor/preferences';
+import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
+import { MatMenuTrigger } from '@angular/material/menu';
 
 class AppDateAdapter extends NativeDateAdapter {
     constructor(matDateLocale: string) {
@@ -149,6 +151,13 @@ export class AppComponent implements AfterContentChecked {
                     date: new Date(i.datumInvoer),
                 });
             });
+        this.Object.values(this.subjects).forEach((x) => {
+            x.grades.sort((a, b) => {
+                if (a.kolom === 'Toetskolom' || a.kolom === 'Werkstukcijferkolom') return -1;
+                if (b.kolom === 'Toetskolom' || b.kolom === 'Werkstukcijferkolom') return 1;
+                return a.date > b.date ? 1 : -1;
+            });
+        });
     }
     async getHomework() {
         let data = await this.somtoday.getHomework(this.homeworkCont.value);
@@ -228,7 +237,7 @@ export class AppComponent implements AfterContentChecked {
         iconColor: 'transparent',
     });
     //--------------------------------------------------------------------------------------------
-    constructor(private http: HttpClient) {
+    constructor(private http: HttpClient, private dialog: MatDialog, private viewRefrence: ViewContainerRef) {
         setVar(this, 'This'); //#####################################################################
         AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' }).then((x) => {
             if (x.value) {
@@ -433,22 +442,23 @@ export class AppComponent implements AfterContentChecked {
         if (this.pages.selected.value === undefined) return undefined;
         return this.pages.selected.value?.data;
     }
-    OpenSomtodayLogin() {
+    openSomtodayLogin() {
         Browser.open({ url: Somtoday.loginLink });
     }
-    async OpenSite(site: Site) {
+    async openSite(site: Site) {
         if (!site.formControl?.value || site.appLink === undefined || !(await AppLauncher.canOpenUrl({ url: site.appLink })).value)
             if (site.webLink !== undefined) return await Browser.open({ url: site.webLink });
         if (site.appLink !== undefined) return await AppLauncher.openUrl({ url: site.appLink });
         alert('No path available.');
         return;
     }
-    TryLogin(text?: string) {
+    tryLogin(text?: string) {
         let t = text ? text : '';
         if (this.someInput !== undefined) t = this.someInput.nativeElement.value;
         this.somtoday.getCodeToken(t);
     }
-    ResetData() {
+    resetData() {
         Preferences.clear();
     }
+    openCalc(two: boolean) {}
 }

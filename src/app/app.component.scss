@@ -2,3 +2,8 @@ img {
     border-radius: 30%;
     background-clip: content-box;
 }
+.tab {
+    height: calc(100% - 2rem);
+    margin: 1rem;
+    overflow: scroll;
+}

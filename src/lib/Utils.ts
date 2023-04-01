@@ -144,7 +144,7 @@ export type Grade = {
     value: number | string;
     weight: number;
     discriptor: string;
-    kolom: 'Toetskolom' | 'SEGemiddeldeKolom' | 'PeriodeGemiddeldeKolom' | 'ToetssoortGemiddeldeKolom' | 'Werkstukcijferkolom';
+    kolom: 'Toetskolom' | 'Werkstukcijferkolom' | 'SEGemiddeldeKolom' | 'PeriodeGemiddeldeKolom' | 'ToetssoortGemiddeldeKolom';
     type: 'Handelingsdeel' | 'Theoretische toets' | null;
 };
 export function setVar(value: any, name: string) {

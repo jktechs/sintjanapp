@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatNativeDateModule } from '@angular/material/core';
 import { HttpClientModule } from '@angular/common/http';
 import { MatInputModule } from '@angular/material/input';
@@ -20,34 +20,36 @@ import { AppComponent } from './app.component';
 import { PageComponent } from './pages/pages.component';
 import { NavPageDirective } from './page/nav-page.directive';
 
-import {MatIconModule} from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
+
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    PageComponent,
-    NavPageDirective
-  ],
-  imports: [
-    BrowserModule,
-    BrowserAnimationsModule,
-    FormsModule, ReactiveFormsModule,
-    HttpClientModule,
-    MatDatepickerModule,
-    MatFormFieldModule,
-    MatNativeDateModule,
-    MatInputModule,
-    MatTabsModule,
-    MatRippleModule,
-    MatCardModule,
-    MatButtonModule,
-    MatListModule,
-    MatDividerModule,
-    MatCheckboxModule,
-    MatChipsModule,
-    MatIconModule
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
+    declarations: [AppComponent, PageComponent, NavPageDirective],
+    imports: [
+        BrowserModule,
+        BrowserAnimationsModule,
+        FormsModule,
+        ReactiveFormsModule,
+        HttpClientModule,
+        MatDatepickerModule,
+        MatFormFieldModule,
+        MatNativeDateModule,
+        MatInputModule,
+        MatTabsModule,
+        MatRippleModule,
+        MatCardModule,
+        MatButtonModule,
+        MatListModule,
+        MatDividerModule,
+        MatCheckboxModule,
+        MatChipsModule,
+        MatIconModule,
+        MatDialogModule,
+        MatMenuModule,
+    ],
+    providers: [],
+    bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}

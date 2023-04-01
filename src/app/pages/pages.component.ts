@@ -1,7 +1,6 @@
-import { Component, ContentChildren, EventEmitter, Injectable, Input, NgZone, OnInit, QueryList, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ContentChildren, EventEmitter, Injectable, Input, NgZone, OnInit, QueryList, ViewEncapsulation } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { NavPageDirective } from '../page/nav-page.directive';
-import { MatTabGroup } from '@angular/material/tabs';
 
 @Component({
     selector: 'app-pages',
@@ -20,7 +19,6 @@ export class PageComponent implements OnInit {
         this.backEvent?.subscribe(() => this.back());
     }
     @Input() visible: number = 2;
-    @ViewChild('demo3Tab', { static: false }) demo3Tab?: MatTabGroup;
 
     items: NavPageDirective[] = [];
     selected = new FormControl<Page>({ id: 0 }, { nonNullable: true });
@@ -33,13 +31,12 @@ export class PageComponent implements OnInit {
     }
     @ContentChildren(NavPageDirective) set listItems(list: QueryList<NavPageDirective>) {
         this.visibles = [];
-        list.forEach((el) => this.items.push(el));
-        this.items.sort((a, b) => {
-            return a.appNavPage > b.appNavPage ? -1 : 1;
-        });
-        for (let i = 0; i < list.length - this.visible; i++) {
-            this.visibles.push(false);
-        }
+        this.items = list
+            .map((x) => x)
+            .sort((a, b) => {
+                return a.appNavPage.id < b.appNavPage.id ? -1 : 1;
+            });
+        for (let i = 0; i < list.length - this.visible; i++) this.visibles.push(false);
     }
     public select(p: Page, updateHistory = true): void {
         this.zone.run(() => {
@@ -47,20 +44,18 @@ export class PageComponent implements OnInit {
             if (p.id === this.selected.value.id) return;
             if (p.id >= this.visible) this.visibles[p.id - this.visible] = true;
             if (updateHistory) this.history.push(structuredClone(this.selected.value));
-
             this.selected.setValue(p);
-
             setTimeout(() => {
                 for (let i = 0; i < this.visibles.length; i++) this.visibles[i] = id === i + this.visible;
             }, 400);
         });
     }
     back(): boolean {
-        let tmp = this.history.pop();
-        if (tmp !== undefined) {
-            this.select(tmp, false);
+        let lastPage = this.history.pop();
+        if (lastPage !== undefined) {
+            this.select(lastPage, false);
         }
-        return !!tmp;
+        return !!lastPage;
     }
 }
 export type Page = {

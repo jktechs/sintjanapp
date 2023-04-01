@@ -20,7 +20,7 @@
                 }"
                 style="filter: brightness(0.9)"
                 [src]="item.data.img"
-                (click)="OpenSite(item.data)"
+                (click)="openSite(item.data)"
             />
         </ng-container>
     </mat-card>
@@ -66,7 +66,7 @@
             <mat-datepicker touchUi #dp disabled="false"></mat-datepicker>
         </mat-form-field>
     </mat-card>
-    <mat-card style="height: calc(100% - 2rem); margin: 1rem; position: relative" *appNavPage="{ name: 'Homework', id: 2, icon: 'list_alt' }">
+    <mat-card style="height: calc(100% - 2rem); margin: 1rem; position: relative; overflow: hidden" *appNavPage="{ name: 'Homework', id: 2, icon: 'list_alt' }">
         <mat-action-list style="overflow: scroll">
             <mat-divider></mat-divider>
             <ng-container *ngFor="let work of homeworks">
@@ -83,7 +83,7 @@
                 <mat-divider></mat-divider>
             </ng-container>
         </mat-action-list>
-        <mat-form-field color="warn" appearance="fill" style="bottom: 0px; position: absolute; width: 100%; position: absolute">
+        <mat-form-field color="warn" appearance="fill" style="bottom: 0px; width: 100%; position: absolute; transform: translateY(22px)">
             <input matInput readonly [matDatepicker]="dp2" [formControl]="homeworkCont" style="margin-top: 0.4rem" />
             <mat-datepicker-toggle matIconSuffix [for]="dp2"></mat-datepicker-toggle>
             <mat-datepicker touchUi #dp2 disabled="false"></mat-datepicker>
@@ -94,7 +94,7 @@
             <mat-divider></mat-divider>
             <ng-container *ngFor="let i of Object.values(subjects)">
                 <button mat-list-item (click)="openPage({ id: 7, data: i })">
-                    {{ i.shortName }}
+                    {{ i.name.charAt(0).toUpperCase() + i.name.slice(1) }}
                 </button>
                 <mat-divider></mat-divider>
             </ng-container>
@@ -117,7 +117,7 @@
         <button mat-raised-button color="primary" style="width: fit-content">Scan Zermelo code</button>
         -->
         <mat-divider></mat-divider>
-        <button mat-raised-button color="primary" style="width: fit-content" (click)="OpenSomtodayLogin()">Login Somtoday</button>
+        <button mat-raised-button color="primary" style="width: fit-content" (click)="openSomtodayLogin()">Login Somtoday</button>
         <mat-divider></mat-divider>
         <!--<button mat-raised-button color="primary" style="width: fit-content" (click)="ResetData()">Reset All Saved Data</button>
         <mat-divider></mat-divider>-->
@@ -185,6 +185,12 @@
             </mat-card-header>
         </ng-container>
         <mat-divider></mat-divider>
+        <button mat-raised-button color="primary" style="width: fit-content" [matMenuTriggerFor]="menu" #calcMenuTrigger>Calculate</button>
+        <!--<button mat-button  #menuTrigger>Menu</button>-->
+        <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="openCalc(false)">One grade</button>
+            <button mat-menu-item (click)="openCalc(true)">Two grade</button>
+        </mat-menu>
     </mat-card>
     <mat-card style="height: calc(100% - 2rem); margin: 1rem; overflow: scroll" *appNavPage="{ name: 'Message', id: 8, icon: 'chat' }"> </mat-card>
 </app-pages>
