@@ -167,7 +167,7 @@ export function request<T>(client: HttpClient, url: string, method: 'GET' | 'PUT
             .pipe(
                 catchError((e, o) => {
                     if (e.status === 0) {
-                        alert("Can't connect. Check your wifi.");
+                        alert("Can't connect. Check your wifi. " + url + '\n' + JSON.stringify(e));
                     } else alert(JSON.stringify(e));
                     return EMPTY;
                 })
@@ -176,4 +176,7 @@ export function request<T>(client: HttpClient, url: string, method: 'GET' | 'PUT
                 resolve(value);
             });
     });
+}
+export function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }

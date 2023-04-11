@@ -4,7 +4,7 @@ import { AskLogin, request, Savable, Token } from './Utils';
 export class SomtodayData {
     public access_token: Token = new Token();
     public refresh_token: Token = new Token();
-    public user_id: number = -1;
+    public user_id: studentResult = new studentResult();
 }
 
 export class Somtoday extends AskLogin implements Savable<SomtodayData> {
@@ -16,7 +16,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         'https://somtoday.nl/oauth2/authorize?redirect_uri=somtodayleerling://oauth/callback&client_id=D50E0C06-32D1-4B41-A137-A9A850C892C2&response_type=code&prompt=login&state=UNlYiXONB69K8uNwNJ2rCw&scope=openid&code_challenge=tCqjy6FPb1kdOfvSa43D8a7j8FLDmKFCAz8EdRGdtQA&code_challenge_method=S256&tenant_uuid=788de26b-bf5a-46d5-bb58-f35ff7bdd172&oidc_iss=https://login.microsoftonline.com/788de26b-bf5a-46d5-bb58-f35ff7bdd172/v2.0&session=no_session';
     public refresh_token: Token = new Token();
     private tokenError?: () => void;
-    public user_id: number = -1;
+    public user_id: studentResult = new studentResult();
     public name: string = 'Somtoday';
     public client?: HttpClient;
     public valid: boolean = true;
@@ -69,7 +69,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         this.refresh_token.setValues(result.refresh_token, 30 * 12 * 3600 * 1000 + new Date().getTime());
         this.access_token.setValues(result.access_token, 3600 * 1000 + new Date().getTime());
         let student = await this.getStudent();
-        this.user_id = student.items[0].links[0].id;
+        this.user_id = student.items[0];
         if (this.access_token.onUpdateToken !== undefined) this.access_token.onUpdateToken(this.access_token);
         this.valid = true;
         return this.access_token;
@@ -80,7 +80,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         });
     }
     public async getStudent(): Promise<{ items: studentResult[] }> {
-        return await this.getData('leerlingen', {}, {});
+        return await this.getData('leerlingen', {}, { additional: 'pasfoto' });
     }
     public static formatDate(data: Date) {
         return data.getFullYear() + '-' + (data.getMonth() + 1 + '').padStart(2, '0') + '-' + (data.getDate() + '').padStart(2, '0');
@@ -99,7 +99,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     }
     public async getGrades(): Promise<{ items: resultatenResult[] }> {
         let param = { additional: 'toetssoortnaam' };
-        return await this.getRange('resultaten/huidigVoorLeerling/' + this.user_id, {}, param);
+        return await this.getData('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, { Range: 'items=0-99' }, param);
     }
     public async getMessages(firstday: Date): Promise<{ items: berichtResult[] }> {
         let begindate = Somtoday.formatDate(firstday);
@@ -115,8 +115,8 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         return {
             items: [
                 ...(await this.getData<rawHuiswerkResult>('studiewijzeritemafspraaktoekenningen', {}, param)).items,
-                ...(await this.getRange<rawHuiswerkResult>('studiewijzeritemdagtoekenningen', {}, param)).items,
-                ...(await this.getRange<rawHuiswerkResult>('studiewijzeritemweektoekenningen', {}, param)).items,
+                ...(await this.getData<rawHuiswerkResult>('studiewijzeritemdagtoekenningen', {}, param)).items,
+                ...(await this.getData<rawHuiswerkResult>('studiewijzeritemweektoekenningen', {}, param)).items,
             ],
         };
     }
@@ -143,20 +143,17 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     */
         return await request<{ items: T[] }>(this.client, Somtoday.baseEndpoint + url, 'GET', '', params, headers);
     }
-    id = 0;
     public async getRange<T>(url: string, _headers: { [name: string]: string }, _params: { [name: string]: string | string[] }): Promise<{ items: T[] }> {
-        let cId = this.id;
-        this.id++;
         let min = 0;
-        let data: { items: T[] };
         let output: { items: T[] } = { items: [] };
+        let l: number;
         do {
-            _headers['Range'] = 'items=' + min + '-' + (min + 99);
-            data = await this.getData<T>(url, _headers, _params);
+            _headers['Range'] = 'items=' + min.toString() + '-' + (min + 99).toString();
+            let data = await this.getData<T>(url, _headers, _params);
+            l = data.items.length;
             output.items = output.items.concat(data.items);
             min += 100;
-            console.log(cId + ': ' + data.items.length);
-        } while (data.items.length >= 100);
+        } while (l >= 100);
         return output;
     }
     public async getCodeToken(code: string): Promise<Token> {
@@ -284,10 +281,22 @@ export type resultatenResult = {
     resultaat?: number;
     geldendResultaat?: number;
 };
-export type studentResult = {
+export class studentResult {
     links: [
         {
             id: number;
         }
-    ];
-};
+    ] = [{ id: -1 }];
+    additionalObjects: {
+        pasfoto: {
+            datauri: string;
+        };
+    } = { pasfoto: { datauri: '' } };
+    UUID = '';
+    leerlingnummer = -1;
+    roepnaam = '';
+    achternaam = '';
+    email = '';
+    geboortedatum = '';
+    geslacht = '';
+}

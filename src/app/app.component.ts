@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterContentChecked, Component, ElementRef, EventEmitter, Injectable, ViewChild, Inject, ViewContainerRef } from '@angular/core';
+import { AfterContentChecked, Component, ElementRef, EventEmitter, Injectable, ViewChild, ViewContainerRef } from '@angular/core';
 import { AbstractControl, FormControl, FormGroupDirective, NgForm, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { DateAdapter, ErrorStateMatcher, MatRipple, MAT_DATE_LOCALE, NativeDateAdapter } from '@angular/material/core';
 import { App } from '@capacitor/app';
-import { Homework, JSONObject, Lesson, Location, Savable, setVar, Subject } from 'src/lib/Utils';
+import { Homework, JSONObject, Lesson, Location, Savable, setVar, Subject, delay } from 'src/lib/Utils';
 import { huiswerkResult, Somtoday, Vak } from 'src/lib/Somtoday';
 import { AppLauncher } from '@capacitor/app-launcher';
 import { MatCheckboxChange } from '@angular/material/checkbox';
@@ -11,8 +11,7 @@ import { Browser } from '@capacitor/browser';
 import { MatDateRangeSelectionStrategy, DateRange, MAT_DATE_RANGE_SELECTION_STRATEGY } from '@angular/material/datepicker';
 import { PageComponent, Page, LayoutType } from './pages/pages.component';
 import { Preferences } from '@capacitor/preferences';
-import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
-import { MatMenuTrigger } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 
 class AppDateAdapter extends NativeDateAdapter {
     constructor(matDateLocale: string) {
@@ -239,38 +238,42 @@ export class AppComponent implements AfterContentChecked {
     //--------------------------------------------------------------------------------------------
     constructor(private http: HttpClient, private dialog: MatDialog, private viewRefrence: ViewContainerRef) {
         setVar(this, 'This'); //#####################################################################
-        AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' }).then((x) => {
-            if (x.value) {
-                this.wigets.push({
-                    x: 2,
-                    y: 1,
-                    w: 1,
-                    h: 1,
-                    data: {
-                        name: 'Cijfer Royale',
-                        img: 'https://cijferroyale.nl/images/logo.png',
-                        appLink: 'com.cijferroyale.CijferRoyale',
-                    },
-                });
-            }
-            Savable.Load('settings', this.settings).then(() => {
-                if (this.layoutFormControl !== null) this.layoutFormControl.setValue(this.settings.value.menu);
-                this.iconColorControl.setValue(this.settings.value.iconColor);
-                let index = 0;
-                this.wigets.forEach((v) => {
-                    let fc = v.data.formControl;
-                    let i = index;
-                    fc?.valueChanges.subscribe((v) => {
-                        this.settings.value.openApp[i] = v !== null ? v : false;
-                        Savable.Save('settings', this.settings);
+        AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' })
+            .then((x) => {
+                if (x.value) {
+                    this.wigets.push({
+                        x: 2,
+                        y: 1,
+                        w: 1,
+                        h: 1,
+                        data: {
+                            name: 'Cijfer Royale',
+                            img: 'https://cijferroyale.nl/images/logo.png',
+                            appLink: 'com.cijferroyale.CijferRoyale',
+                        },
                     });
-                    //if(v.appLink !== undefined){
-                    //this.checked.push(fc);
-                    //}
-                    index++;
+                }
+            })
+            .then(() => {
+                Savable.Load('settings', this.settings).then(() => {
+                    if (this.layoutFormControl !== null) this.layoutFormControl.setValue(this.settings.value.menu);
+                    this.iconColorControl.setValue(this.settings.value.iconColor);
+                    let index = 0;
+                    this.wigets.forEach((v) => {
+                        let fc = v.data.formControl;
+                        let i = index;
+                        fc?.setValue(this.settings.value.openApp[i]);
+                        fc?.valueChanges.subscribe((v) => {
+                            this.settings.value.openApp[i] = v !== null ? v : false;
+                            Savable.Save('settings', this.settings);
+                        });
+                        //if(v.appLink !== undefined){
+                        //this.checked.push(fc);
+                        //}
+                        index++;
+                    });
                 });
             });
-        });
         this.layoutFormControl.valueChanges.subscribe((v) => {
             if (v !== null) this.setLayout(v);
         });
@@ -307,6 +310,7 @@ export class AppComponent implements AfterContentChecked {
             //alert('back' + data.canGoBack);
             //window.history.back();
         });
+        delay(500).then(() => this.getLessons());
     }
     //home--------------------------------------------------------------------------------------
     wigets: Wiget[] = [
@@ -400,13 +404,23 @@ export class AppComponent implements AfterContentChecked {
     startDate = new FormControl(new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 1)));
     stopDate = new FormControl(new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 5 + (this.dateType === 'semiWeek' ? 0 : 2))));
     clicks: number = 0;
+    lastClickOffset = 0;
     onClick(e: MouseEvent): void {
+        if (!(e.target instanceof HTMLElement) || this.ripple === undefined) return;
         this.clicks += 1;
         setTimeout(() => {
             this.clicks -= 1;
         }, 300);
-        if (this.clicks >= 2 && e.target instanceof HTMLElement && this.ripple !== undefined) {
+        if (this.clicks >= 2) {
             let dir: boolean = e.offsetX > e.target.clientWidth / 2;
+
+            let bounds = e.target.getBoundingClientRect();
+            this.ripple.launch(bounds.x + (dir ? 1 : 0) * bounds.width, bounds.y + bounds.height / 2, {});
+
+            let dir2: boolean = this.lastClickOffset > e.target.clientWidth / 2;
+
+            if (dir != dir2) return;
+
             if (this.dateType === 'day') {
                 let tmp = this.date.value;
                 if (tmp !== null) tmp = new Date(tmp.getTime() + (dir ? 1 : -1) * 1000 * 3600 * 24);
@@ -420,10 +434,8 @@ export class AppComponent implements AfterContentChecked {
                 if (tmp !== null) tmp = new Date(tmp.getTime() + (dir ? 1 : -1) * 1000 * 3600 * 24 * 7);
                 this.stopDate.setValue(tmp);
             }
-
-            let bounds = e.target.getBoundingClientRect();
-            this.ripple.launch(bounds.x + (dir ? 1 : 0) * bounds.width, bounds.y + bounds.height / 2, {});
         }
+        this.lastClickOffset = e.offsetX;
     }
     //---------------------------------------------------------------------------
     tabs = {
@@ -446,7 +458,7 @@ export class AppComponent implements AfterContentChecked {
         Browser.open({ url: Somtoday.loginLink });
     }
     async openSite(site: Site) {
-        if (!site.formControl?.value || site.appLink === undefined || !(await AppLauncher.canOpenUrl({ url: site.appLink })).value)
+        if (site.formControl?.value || site.appLink === undefined || !(await AppLauncher.canOpenUrl({ url: site.appLink })).value)
             if (site.webLink !== undefined) return await Browser.open({ url: site.webLink });
         if (site.appLink !== undefined) return await AppLauncher.openUrl({ url: site.appLink });
         alert('No path available.');
@@ -460,5 +472,28 @@ export class AppComponent implements AfterContentChecked {
     resetData() {
         Preferences.clear();
     }
-    openCalc(two: boolean) {}
+    isCalcOpen: boolean = false;
+    weightControl = new FormControl<number>(1, { nonNullable: true });
+    gradeControl = new FormControl<number>(1, { nonNullable: true });
+    calcOpen() {
+        this.isCalcOpen = !this.isCalcOpen;
+    }
+    get gradeInfo() {
+        if (!this.pages) return { totalWeight: 1, total: 0 };
+        let data = this.pages.selected.value.data as Subject;
+        let w = 0;
+        let v = 0;
+        data.grades.forEach((x) => {
+            let isString = isNaN((x.value as string).replace(',', '.') as unknown as number);
+            if (isString || (x.kolom !== 'Toetskolom' && x.kolom !== 'Werkstukcijferkolom')) return;
+            w += x.weight;
+            v += ((x.value as string).replace(',', '.') as unknown as number) * x.weight;
+        });
+        return { totalWeight: w, total: v };
+    }
+    clamp(n: number) {
+        if (n > 10) return '>10';
+        else if (n < 1) return '<1';
+        else return String(n).replace('.', ',');
+    }
 }
