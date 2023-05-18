@@ -15,14 +15,15 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     public static loginLink =
         'https://somtoday.nl/oauth2/authorize?redirect_uri=somtodayleerling://oauth/callback&client_id=D50E0C06-32D1-4B41-A137-A9A850C892C2&response_type=code&prompt=login&state=UNlYiXONB69K8uNwNJ2rCw&scope=openid&code_challenge=tCqjy6FPb1kdOfvSa43D8a7j8FLDmKFCAz8EdRGdtQA&code_challenge_method=S256&tenant_uuid=788de26b-bf5a-46d5-bb58-f35ff7bdd172&oidc_iss=https://login.microsoftonline.com/788de26b-bf5a-46d5-bb58-f35ff7bdd172/v2.0&session=no_session';
     public refresh_token: Token = new Token();
-    private tokenError?: () => void;
+    private tokenError: () => void;
     public user_id: studentResult = new studentResult();
     public name: string = 'Somtoday';
     public client?: HttpClient;
     public valid: boolean = true;
-    constructor(tokenUpdate?: (a: Token) => void, tokenError?: () => void) {
+    public onUpdateToken: (a: Token) => void;
+    constructor(tokenUpdate: (a: Token) => void, tokenError: () => void) {
         super();
-        this.access_token.onUpdateToken = tokenUpdate;
+        this.onUpdateToken = tokenUpdate;
         this.tokenError = tokenError;
     }
     simplify(): SomtodayData {
@@ -36,6 +37,8 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         this.user_id = simple.user_id;
         this.refresh_token.setValue(simple.refresh_token);
         this.access_token.setValue(simple.access_token);
+        if (this.access_token) this.resolveToken();
+        else this.onUpdateToken(this.access_token);
     }
     public async resolveToken(): Promise<Token> {
         if (!this.refresh_token.isValid) {
@@ -68,9 +71,9 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         );
         this.refresh_token.setValues(result.refresh_token, 30 * 12 * 3600 * 1000 + new Date().getTime());
         this.access_token.setValues(result.access_token, 3600 * 1000 + new Date().getTime());
+        this.onUpdateToken(this.access_token);
         let student = await this.getStudent();
         this.user_id = student.items[0];
-        if (this.access_token.onUpdateToken !== undefined) this.access_token.onUpdateToken(this.access_token);
         this.valid = true;
         return this.access_token;
     }
@@ -99,7 +102,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     }
     public async getGrades(): Promise<{ items: resultatenResult[] }> {
         let param = { additional: 'toetssoortnaam' };
-        return await this.getData('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, { Range: 'items=0-99' }, param);
+        return await this.getRange('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, {}, param);
     }
     public async getMessages(firstday: Date): Promise<{ items: berichtResult[] }> {
         let begindate = Somtoday.formatDate(firstday);
@@ -265,8 +268,15 @@ export type Vak = {
     afkorting: string;
     naam: string;
 };
+export type resultaatType =
+    | 'Toetskolom'
+    | 'SEGemiddeldeKolom'
+    | 'PeriodeGemiddeldeKolom'
+    | 'ToetssoortGemiddeldeKolom'
+    | 'Werkstukcijferkolom'
+    | 'RapportGemiddeldeKolom';
 export type resultatenResult = {
-    type: 'Toetskolom' | 'SEGemiddeldeKolom' | 'PeriodeGemiddeldeKolom' | 'ToetssoortGemiddeldeKolom' | 'Werkstukcijferkolom';
+    type: resultaatType;
     additionalObjects: {
         toetssoortnaam: 'Handelingsdeel' | 'Theoretische toets' | null;
     };
@@ -280,6 +290,8 @@ export type resultatenResult = {
     omschrijving?: string;
     resultaat?: number;
     geldendResultaat?: number;
+    isExamendossierResultaat: boolean;
+    isVoortgangsdossierResultaat: boolean;
 };
 export class studentResult {
     links: [

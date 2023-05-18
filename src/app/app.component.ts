@@ -80,6 +80,7 @@ type Block = {
     title: string;
     location: string;
     teacher: string;
+    time: string;
     left: number;
     top: number;
 };
@@ -114,6 +115,7 @@ export class AppComponent implements AfterContentChecked {
                 teacher: lesson.teacher,
                 left,
                 top,
+                time: lesson.date.getHours() + ':' + lesson.date.getMinutes(),
             };
         });
     }
@@ -130,25 +132,37 @@ export class AppComponent implements AfterContentChecked {
                     this.subjects[subjectData.shortName] = subjectData;
                 } else subjectData = this.subjects[subject.afkorting];
 
-                let weight = 0;
-                if (i.weging && i.weging !== 0) weight = i.weging;
-                if (i.examenWeging && i.examenWeging !== 0) weight = i.examenWeging;
-
                 let value: string | number = -1;
                 if (i.resultaatLabelAfkorting !== undefined) value = i.resultaatLabelAfkorting;
                 else if (i.resultaat && i.resultaat !== -1) value = i.resultaat;
                 else if (i.geldendResultaat && i.geldendResultaat !== -1) value = i.geldendResultaat;
 
-                subjectData.grades.push({
-                    kolom: i.type,
-                    periode: i.periode,
-                    leerjaar: i.leerjaar,
-                    type: i.additionalObjects.toetssoortnaam,
-                    discriptor: i.omschrijving ? i.omschrijving : 'None',
-                    value,
-                    weight,
-                    date: new Date(i.datumInvoer),
-                });
+                if (i.isExamendossierResultaat) {
+                    subjectData.grades.push({
+                        kolom: i.type,
+                        periode: i.periode,
+                        leerjaar: i.leerjaar,
+                        type: i.additionalObjects.toetssoortnaam,
+                        discriptor: i.omschrijving ? i.omschrijving : 'None',
+                        value,
+                        weight: i.examenWeging ? i.examenWeging : 0,
+                        date: new Date(i.datumInvoer),
+                        exam: true,
+                    });
+                }
+                if (i.isVoortgangsdossierResultaat) {
+                    subjectData.grades.push({
+                        kolom: i.type,
+                        periode: i.periode,
+                        leerjaar: i.leerjaar,
+                        type: i.additionalObjects.toetssoortnaam,
+                        discriptor: i.omschrijving ? i.omschrijving : 'None',
+                        value,
+                        weight: i.weging ? i.weging : 0,
+                        date: new Date(i.datumInvoer),
+                        exam: false,
+                    });
+                }
             });
         this.Object.values(this.subjects).forEach((x) => {
             x.grades.sort((a, b) => {
@@ -181,7 +195,7 @@ export class AppComponent implements AfterContentChecked {
             (i) =>
                 new Lesson(
                     i.additionalObjects.docentAfkortingen,
-                    (i.additionalObjects.vak ? i.additionalObjects.vak : { afkorting: 'XXX', naam: 'Onbekend' }).afkorting,
+                    i.additionalObjects.vak ? i.additionalObjects.vak.afkorting : i.titel,
                     new Location(i.locatie === undefined ? 'E000' : i.locatie),
                     new Date(i.beginDatumTijd),
                     new Date(i.eindDatumTijd)
@@ -190,10 +204,16 @@ export class AppComponent implements AfterContentChecked {
     }
     public somtoday: Somtoday = new Somtoday(
         async () => {
-            await Savable.Save('somtoday', this.somtoday);
-            await this.getLessons();
-            await this.getGrades();
-            await this.getHomework();
+            Savable.Save('somtoday', this.somtoday)
+                .then(() => {
+                    return this.getLessons();
+                })
+                .then(() => {
+                    return this.getGrades();
+                })
+                .then(() => {
+                    return this.getHomework();
+                });
         },
         () => this.openPage({ id: 4 })
     );
@@ -212,7 +232,7 @@ export class AppComponent implements AfterContentChecked {
     setAll(b: MatCheckboxChange) {
         this.appSites.forEach((x) => x.setValue(b.checked));
     }
-    layoutFormControl = new FormControl<LayoutType>('stretch');
+    layoutFormControl = new FormControl<LayoutType>('stretch', { nonNullable: true });
     iconColorControl = new FormControl<string>('transparent', { nonNullable: true });
     layout: LayoutType = 'stretch';
     setLayout(v: LayoutType = 'stretch') {
@@ -222,7 +242,7 @@ export class AppComponent implements AfterContentChecked {
     }
     zermeloFormControl = new FormControl('', [Validators.required, ZermeloValidator(new RegExp('(?:[0-9]{3} ?){4}'))]);
     matcher = new ZermeloErrorStateMatcher();
-    @ViewChild('somCode') someInput?: ElementRef<HTMLInputElement>;
+    //@ViewChild('somCode') someInput?: ElementRef<HTMLInputElement>;
     zermeloSubmit(e: SubmitEvent) {
         if (this.zermeloFormControl.valid) console.log(this.zermeloFormControl.value?.replaceAll(' ', ''));
     }
@@ -238,42 +258,39 @@ export class AppComponent implements AfterContentChecked {
     //--------------------------------------------------------------------------------------------
     constructor(private http: HttpClient, private dialog: MatDialog, private viewRefrence: ViewContainerRef) {
         setVar(this, 'This'); //#####################################################################
-        AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' })
-            .then((x) => {
-                if (x.value) {
-                    this.wigets.push({
-                        x: 2,
-                        y: 1,
-                        w: 1,
-                        h: 1,
-                        data: {
-                            name: 'Cijfer Royale',
-                            img: 'https://cijferroyale.nl/images/logo.png',
-                            appLink: 'com.cijferroyale.CijferRoyale',
-                        },
+        AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' }).then((x) => {
+            if (x.value) {
+                this.wigets.push({
+                    x: 2,
+                    y: 1,
+                    w: 1,
+                    h: 1,
+                    data: {
+                        name: 'Cijfer Royale',
+                        img: 'https://cijferroyale.nl/images/logo.png',
+                        appLink: 'com.cijferroyale.CijferRoyale',
+                    },
+                });
+            }
+            Savable.Load('settings', this.settings).then(() => {
+                if (this.layoutFormControl !== null) this.layoutFormControl.setValue(this.settings.value.menu);
+                this.iconColorControl.setValue(this.settings.value.iconColor);
+                let index = 0;
+                this.wigets.forEach((v) => {
+                    let fc = v.data.formControl;
+                    let i = index;
+                    fc?.setValue(this.settings.value.openApp[i]);
+                    fc?.valueChanges.subscribe((v) => {
+                        this.settings.value.openApp[i] = v !== null ? v : false;
+                        Savable.Save('settings', this.settings);
                     });
-                }
-            })
-            .then(() => {
-                Savable.Load('settings', this.settings).then(() => {
-                    if (this.layoutFormControl !== null) this.layoutFormControl.setValue(this.settings.value.menu);
-                    this.iconColorControl.setValue(this.settings.value.iconColor);
-                    let index = 0;
-                    this.wigets.forEach((v) => {
-                        let fc = v.data.formControl;
-                        let i = index;
-                        fc?.setValue(this.settings.value.openApp[i]);
-                        fc?.valueChanges.subscribe((v) => {
-                            this.settings.value.openApp[i] = v !== null ? v : false;
-                            Savable.Save('settings', this.settings);
-                        });
-                        //if(v.appLink !== undefined){
-                        //this.checked.push(fc);
-                        //}
-                        index++;
-                    });
+                    //if(v.appLink !== undefined){
+                    //this.checked.push(fc);
+                    //}
+                    index++;
                 });
             });
+        });
         this.layoutFormControl.valueChanges.subscribe((v) => {
             if (v !== null) this.setLayout(v);
         });
@@ -310,7 +327,6 @@ export class AppComponent implements AfterContentChecked {
             //alert('back' + data.canGoBack);
             //window.history.back();
         });
-        delay(500).then(() => this.getLessons());
     }
     //home--------------------------------------------------------------------------------------
     wigets: Wiget[] = [
@@ -466,13 +482,14 @@ export class AppComponent implements AfterContentChecked {
     }
     tryLogin(text?: string) {
         let t = text ? text : '';
-        if (this.someInput !== undefined) t = this.someInput.nativeElement.value;
+        //if (this.someInput !== undefined) t = this.someInput.nativeElement.value;
         this.somtoday.getCodeToken(t);
     }
     resetData() {
         Preferences.clear();
     }
     isCalcOpen: boolean = false;
+    isExamControl = new FormControl<boolean>(false, { nonNullable: true });
     weightControl = new FormControl<number>(1, { nonNullable: true });
     gradeControl = new FormControl<number>(1, { nonNullable: true });
     calcOpen() {
@@ -486,10 +503,11 @@ export class AppComponent implements AfterContentChecked {
         data.grades.forEach((x) => {
             let isString = isNaN((x.value as string).replace(',', '.') as unknown as number);
             if (isString || (x.kolom !== 'Toetskolom' && x.kolom !== 'Werkstukcijferkolom')) return;
+            if (x.exam !== this.isExamControl.value) return;
             w += x.weight;
             v += ((x.value as string).replace(',', '.') as unknown as number) * x.weight;
         });
-        return { totalWeight: w, total: v };
+        return { totalWeight: w, total: Math.ceil(v * 10) / 10 };
     }
     clamp(n: number) {
         if (n > 10) return '>10';

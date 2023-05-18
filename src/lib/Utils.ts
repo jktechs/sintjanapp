@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { GetResult, Preferences } from '@capacitor/preferences';
 import { catchError, EMPTY } from 'rxjs';
-import { Vak } from './Somtoday';
+import { Vak, resultaatType } from './Somtoday';
 export abstract class Savable<M> {
     abstract simplify(): M;
     abstract readFromObject(simple: M): void;
@@ -31,7 +31,6 @@ export abstract class AskLogin {
 export class Token {
     private expire_time: number;
     private _value: string;
-    onUpdateToken: ((a: Token) => void) | undefined;
     constructor(value = '', expire_time = 0) {
         this._value = value;
         this.expire_time = expire_time;
@@ -39,15 +38,13 @@ export class Token {
     toString(): string {
         return '(' + this.value + ',' + this.expire_time + ')';
     }
-    public setValues(value: string, expire_time: number) {
+    public async setValues(value: string, expire_time: number) {
         this._value = value;
         this.expire_time = expire_time;
-        if (this.onUpdateToken !== undefined) this.onUpdateToken(this);
     }
-    public setValue(t: Token) {
+    public async setValue(t: Token) {
         this._value = t._value;
         this.expire_time = t.expire_time;
-        if (this.onUpdateToken !== undefined) this.onUpdateToken(this);
     }
     public get value(): string {
         return this._value;
@@ -118,6 +115,7 @@ export class Lesson {
     location: Location;
     start: number;
     end: number;
+    //title: string;
     //homework: Homework[];
 }
 export type Homework = {
@@ -144,8 +142,9 @@ export type Grade = {
     value: number | string;
     weight: number;
     discriptor: string;
-    kolom: 'Toetskolom' | 'Werkstukcijferkolom' | 'SEGemiddeldeKolom' | 'PeriodeGemiddeldeKolom' | 'ToetssoortGemiddeldeKolom';
+    kolom: resultaatType;
     type: 'Handelingsdeel' | 'Theoretische toets' | null;
+    exam: boolean;
 };
 export function setVar(value: any, name: string) {
     // @ts-ignore

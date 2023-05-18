@@ -46,8 +46,16 @@
                     }"
                 >
                     <mat-card-header style="padding: 0px">
-                        <mat-card-title> {{ i.title }} </mat-card-title>
-                        <mat-card-subtitle> {{ i.location }} {{ i.teacher }} </mat-card-subtitle>
+                        <mat-card-title style="overflow-wrap: break-word" [style]="{ width: 'calc((100vw - 2rem) * ' + i.w + ')' }">
+                            {{ i.title[0].toUpperCase() + i.title.substr(1) }}
+                        </mat-card-title>
+                        <mat-card-subtitle
+                            style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; overflow-wrap: break-word"
+                            [style]="{ width: 'calc((100vw - 2rem) * ' + i.w + ')' }"
+                        >
+                            {{ i.location }} {{ i.teacher }}
+                        </mat-card-subtitle>
+                        <mat-card-subtitle style="position: absolute; bottom: 5px; right: 5px"> {{ i.time }} </mat-card-subtitle>
                     </mat-card-header>
                 </mat-card>
             </ng-container>
@@ -162,7 +170,7 @@
             <mat-divider></mat-divider>
             <mat-card-header style="padding: 0px">
                 <mat-card-subtitle>
-                    Developer: Jannick Koppe, SJ31011103, SV6A. <a href="mailto: sintjanapp@gmail.com">sintjanapp@gmail.com</a>
+                    Developer: Jannick Koppe, SJ31011103, SV6A. <br /><a href="mailto: sintjanapp@gmail.com">sintjanapp@gmail.com</a>
                 </mat-card-subtitle>
             </mat-card-header>
         </form>
@@ -191,6 +199,7 @@
                     <input matInput type="number" [formControl]="gradeControl" />
                 </mat-form-field>
             </mat-card-subtitle>
+            <mat-checkbox [formControl]="isExamControl">Exam</mat-checkbox>
             <mat-card-title style="margin-left: 3vw">
                 {{ clamp((gradeControl.value * (gradeInfo.totalWeight + weightControl.value) - gradeInfo.total) / weightControl.value) }}
             </mat-card-title>
@@ -201,6 +210,7 @@
                 <mat-card-title>
                     {{ item.value }} {{ item.kolom }}
                     {{ item.weight === 0 ? '' : item.weight }}
+                    {{ item.exam ? 'exam' : 'normal' }}
                     {{
                         item.date.toLocaleDateString(undefined, {
                             year: 'numeric',
