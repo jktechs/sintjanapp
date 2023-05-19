@@ -1,27 +1,62 @@
 # Sintjanapp
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 15.1.1.
+The Sint-Jan app is meant to be the jumping-off point for doing anything online for Sint-Jan.
 
-## Development server
+Currently it give links to:
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+-   Zermelo
+-   ItsLearning
+-   Somtoday
+-   The OLC website / The aura library app
+-   Office
+-   Optionaly Cijfer Royale
 
-## Code scaffolding
+It also has builtin links to Somtoday. Including:
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+-   Grades
+-   Schedule
+-   Homework
+
+## Development webserver
+
+---
+
+Run `npm start` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+
+The main `AppComponent` instance will be availible in the console as `This`. This will allow you to do things like run `This.tryLogin("CODE")`.
+
+This is because in a webserver some things like logging in to somtoday are not possible.
+
+An other handy function is `This.resetData()`. For when your settings become corrupted.
 
 ## Build
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+---
+
+Run `npm run build` to build the project. This will update the android studio porject.
+
+## Android project
+
+---
+
+Run `npm run android` to open the project in android studio.
 
 ## Running unit tests
 
+---
+
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
 
-## Running end-to-end tests
+Currently there are no tests.
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Requirements
 
-## Further help
+---
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+Both [Node.js](https://nodejs.org/en/download) and [Android studio](https://developer.android.com/studio) need to be installed.
+
+To install the angular cli run `npm install -g @angular/cli`.
+
+Then to initialize the project run `npm install`.
+
+Now you can build and open the project in Android studio or view it in the browser.
