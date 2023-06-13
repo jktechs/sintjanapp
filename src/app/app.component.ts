@@ -253,7 +253,7 @@ export class AppComponent implements AfterContentChecked {
     }> = new JSONObject({
         openApp: [false, false, false, false, false],
         menu: 'stretch',
-        iconColor: 'transparent',
+        iconColor: 'white',
     });
     //--------------------------------------------------------------------------------------------
     constructor(private http: HttpClient, private dialog: MatDialog, private viewRefrence: ViewContainerRef) {

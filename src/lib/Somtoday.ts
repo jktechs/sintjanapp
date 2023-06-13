@@ -35,9 +35,10 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     }
     public readFromObject(simple: SomtodayData): void {
         this.user_id = simple.user_id;
+        //alert('got user id:' + this.user_id.leerlingnummer);
         this.refresh_token.setValue(simple.refresh_token);
         this.access_token.setValue(simple.access_token);
-        if (this.access_token) this.resolveToken();
+        if (!this.access_token.isValid) this.resolveToken();
         else this.onUpdateToken(this.access_token);
     }
     public async resolveToken(): Promise<Token> {
@@ -49,6 +50,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         } else return await this.getToken('refresh_token', this.refresh_token.value);
     }
     public async getToken(grant_type: string, grant_value: string, extra_parms?: { [name: string]: string }): Promise<Token> {
+        //if ('refresh_token' == grant_type) alert('refreshing');
         if (this.client === undefined) {
             alert('client is null');
             return new Token();
@@ -71,9 +73,9 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         );
         this.refresh_token.setValues(result.refresh_token, 30 * 12 * 3600 * 1000 + new Date().getTime());
         this.access_token.setValues(result.access_token, 3600 * 1000 + new Date().getTime());
-        this.onUpdateToken(this.access_token);
         let student = await this.getStudent();
         this.user_id = student.items[0];
+        this.onUpdateToken(this.access_token);
         this.valid = true;
         return this.access_token;
     }
@@ -101,6 +103,7 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         return await this.getData('afspraken', {}, param);
     }
     public async getGrades(): Promise<{ items: resultatenResult[] }> {
+        //alert('getting grades');
         let param = { additional: 'toetssoortnaam' };
         return await this.getRange('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, {}, param);
     }
