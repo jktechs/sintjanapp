@@ -1,6 +1,8 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { AskLogin, request, Savable, Token } from './Utils';
-
+/**
+ * Represents all the data that the Somtoday API needs to have saved.
+ */
 export class SomtodayData {
     public access_token: Token = new Token();
     public refresh_token: Token = new Token();
@@ -17,7 +19,6 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     public refresh_token: Token = new Token();
     private tokenError: () => void;
     public user_id: studentResult = new studentResult();
-    public name: string = 'Somtoday';
     public client?: HttpClient;
     public valid: boolean = true;
     public onUpdateToken: (a: Token) => void;
@@ -35,7 +36,6 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
     }
     public readFromObject(simple: SomtodayData): void {
         this.user_id = simple.user_id;
-        //alert('got user id:' + this.user_id.leerlingnummer);
         this.refresh_token.setValue(simple.refresh_token);
         this.access_token.setValue(simple.access_token);
         if (!this.access_token.isValid) this.resolveToken();
@@ -46,11 +46,10 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
             alert('Please login to Somtoday.');
             this.valid = false;
             if (this.tokenError !== undefined) this.tokenError();
-            throw new Error('No Token.'); //-------------------------------------------------------------------------------------------------------
+            throw new Error('No Token.');
         } else return await this.getToken('refresh_token', this.refresh_token.value);
     }
     public async getToken(grant_type: string, grant_value: string, extra_parms?: { [name: string]: string }): Promise<Token> {
-        //if ('refresh_token' == grant_type) alert('refreshing');
         if (this.client === undefined) {
             alert('client is null');
             return new Token();
@@ -95,17 +94,20 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         let enddate = Somtoday.formatDate(new Date(lastday.valueOf() + 1000 * 3600 * 24));
 
         let param = {
-            additional: ['vak', 'docentAfkortingen'],
+            additional: ['vak', 'docentAfkortingen'], // leerlingen
             begindatum: begindate,
             einddatum: enddate,
             sort: 'asc-id',
-        }; //additional=leerlingen
+        };
         return await this.getData('afspraken', {}, param);
     }
     public async getGrades(): Promise<{ items: resultatenResult[] }> {
-        //alert('getting grades');
-        let param = { additional: 'toetssoortnaam' };
-        return await this.getRange('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, {}, param);
+        let param = { leerling: this.user_id.links[0].id.toString() }; //additional: 'toetssoortnaam',
+        let data2 = await this.getRange<resultatenResult>('resultaten/huidigVoorLeerling/' + this.user_id.links[0].id, {}, param);
+        let data1 = await this.getRange<resultatenResult>('resultaten' /*/huidigVoorLeerling/' + this.user_id.links[0].id*/, {}, param);
+        let output = { items: data1.items.concat(data2.items) };
+        console.log(JSON.stringify(output));
+        return output;
     }
     public async getMessages(firstday: Date): Promise<{ items: berichtResult[] }> {
         let begindate = Somtoday.formatDate(firstday);
@@ -141,25 +143,40 @@ export class Somtoday extends AskLogin implements Savable<SomtodayData> {
         for (let i of Object.entries(_params))
             if (Array.isArray(i[1])) for (let j of i[1]) params = params.append(i[0], j);
             else params = params.append(i[0], i[1]);
-        /*
-    return (await Http.get({--------------------------------------------------------------------------------------------------------------------------------
-        url: Somtoday.baseEndpoint + url,
-        headers,
-    })).data;
-    */
         return await request<{ items: T[] }>(this.client, Somtoday.baseEndpoint + url, 'GET', '', params, headers);
     }
+    errorInds: number[] = [];
     public async getRange<T>(url: string, _headers: { [name: string]: string }, _params: { [name: string]: string | string[] }): Promise<{ items: T[] }> {
-        let min = 0;
+        let max = 99;
+        let ranges: { min: number; max: number }[] = [{ min: 0, max: 99 }];
         let output: { items: T[] } = { items: [] };
         let l: number;
-        do {
-            _headers['Range'] = 'items=' + min.toString() + '-' + (min + 99).toString();
-            let data = await this.getData<T>(url, _headers, _params);
-            l = data.items.length;
-            output.items = output.items.concat(data.items);
-            min += 100;
-        } while (l >= 100);
+        while (true) {
+            let c = ranges.pop();
+            if (c == undefined) break;
+            _headers['Range'] = 'items=' + c.min.toString() + '-' + c.max.toString();
+            try {
+                let data = await this.getData<T>(url, _headers, _params);
+                if (data.items.length == c.max - c.min + 1 && c.max == max) {
+                    ranges.push({ min: max + 1, max: max + 100 });
+                    max += 100;
+                }
+                console.log('Succses: ' + JSON.stringify(c));
+                output.items = output.items.concat(data.items);
+            } catch (e) {
+                if (c.max != c.min) {
+                    let middle = Math.floor((c.max + c.min) / 2);
+                    ranges.push({ min: c.min, max: middle });
+                    ranges.push({ min: middle + 1, max: c.max });
+                } else {
+                    this.errorInds.push(c.max);
+                    if (c.max == max) {
+                        ranges.push({ min: max + 1, max: max + 100 });
+                    }
+                }
+            }
+        }
+        console.log(JSON.stringify(this.errorInds.sort()));
         return output;
     }
     public async getCodeToken(code: string): Promise<Token> {

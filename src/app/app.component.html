@@ -8,6 +8,7 @@
     style="bottom: 0px; position: absolute; width: 100vw; left: 0px; height: 100%"
 >
     <mat-card class="apptab" #home *appNavPage="{ name: 'Home', id: 0, icon: 'home' }">
+        <!--                                                                                                                               Home Page -->
         <ng-container *ngFor="let item of wigets" style="position: relative">
             <img
                 [ngStyle]="{
@@ -25,6 +26,7 @@
         </ng-container>
     </mat-card>
     <mat-card class="apptab" style="overflow: hidden" *appNavPage="{ name: 'Schedule', id: 1, icon: 'calendar_month' }">
+        <!--                                                                                                                               Schedule -->
         <mat-card
             style="width: 100%; height: 100%; overflow: scroll; position: relative"
             matRipple
@@ -36,6 +38,7 @@
         >
             <ng-container *ngFor="let i of blocks">
                 <mat-card
+                    (click)="openPage({ id: 6, data: i.lesson })"
                     style="filter: brightness(0.9); padding: 0px"
                     [style]="{
                         width: 'calc((100vw - 2rem) * ' + i.w + ')',
@@ -47,15 +50,17 @@
                 >
                     <mat-card-header style="padding: 0px">
                         <mat-card-title style="overflow-wrap: break-word" [style]="{ width: 'calc((100vw - 2rem) * ' + i.w + ')' }">
-                            {{ i.title[0].toUpperCase() + i.title.substr(1) }}
+                            {{ i.lesson.subject[0].toUpperCase() + i.lesson.subject.substr(1) }}
                         </mat-card-title>
                         <mat-card-subtitle
                             style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; overflow-wrap: break-word"
                             [style]="{ width: 'calc((100vw - 2rem) * ' + i.w + ')' }"
                         >
-                            {{ i.location }} {{ i.teacher }}
+                            {{ i.lesson.location }} {{ i.lesson.teacher }}
                         </mat-card-subtitle>
-                        <mat-card-subtitle style="position: absolute; bottom: 5px; right: 5px"> {{ i.time }} </mat-card-subtitle>
+                        <mat-card-subtitle style="position: absolute; bottom: 5px; right: 5px">
+                            {{ i.lesson.date.getHours() + ':' + i.lesson.date.getMinutes() }}
+                        </mat-card-subtitle>
                     </mat-card-header>
                 </mat-card>
             </ng-container>
@@ -75,6 +80,7 @@
         </mat-form-field>
     </mat-card>
     <mat-card class="apptab" style="position: relative; overflow: hidden" *appNavPage="{ name: 'Homework', id: 2, icon: 'list_alt' }">
+        <!--                                                                                                                               Homework item -->
         <mat-action-list style="overflow: scroll">
             <mat-divider></mat-divider>
             <ng-container *ngFor="let work of homeworks">
@@ -100,6 +106,7 @@
         </mat-form-field>
     </mat-card>
     <mat-card class="apptab" *appNavPage="{ name: 'Grades', id: 3, icon: 'task' }">
+        <!--                                                                                                                               Subject list-->
         <mat-action-list>
             <mat-divider></mat-divider>
             <ng-container *ngFor="let i of Object.values(subjects)">
@@ -113,6 +120,7 @@
         </mat-action-list>
     </mat-card>
     <mat-card class="apptab" *appNavPage="{ name: 'Settings', id: 4, icon: 'settings' }">
+        <!--                                                                                                                               Settings -->
         <img [src]="somtoday.user_id.additionalObjects.pasfoto.datauri" style="border-radius: 5%; width: 25%" />
         <mat-card-subtitle style="color: white">
             {{ somtoday.user_id.roepnaam }} {{ somtoday.user_id.achternaam }}<br />{{ somtoday.user_id.leerlingnummer }}
@@ -163,10 +171,6 @@
                 <mat-chip-option value="white">White</mat-chip-option>
                 <mat-chip-option value="transparent">None</mat-chip-option>
             </mat-chip-listbox>
-            <!--
-            <input #somCode matInput placeholder="som code" />
-            <button mat-raised-button color="primary" style="width: fit-content" (click)="TryLogin()">Debug som</button>
-            -->
             <mat-divider></mat-divider>
             <mat-card-header style="padding: 0px">
                 <mat-card-subtitle>
@@ -175,14 +179,22 @@
             </mat-card-header>
         </form>
     </mat-card>
-    <mat-card class="apptab" *appNavPage="{ name: 'Lesson', id: 5, icon: 'calendar_month' }"> </mat-card>
-    <mat-card class="apptab" *appNavPage="{ name: 'Homework', id: 6, icon: 'list_alt' }">
+    <mat-card class="apptab" *appNavPage="{ name: 'Lesson', id: 5, icon: 'calendar_month' }">
+        <!--                                                                                                                               Lesson -->
         <mat-card-header style="padding: 0px">
             <mat-card-title [innerHTML]="pageData?.title"> </mat-card-title>
             <mat-card-subtitle [innerHTML]="pageData?.content"> </mat-card-subtitle>
         </mat-card-header>
     </mat-card>
-    <mat-card class="apptab" *appNavPage="{ name: 'grade', id: 7, icon: 'task' }">
+    <mat-card class="apptab" *appNavPage="{ name: 'Homework', id: 6, icon: 'list_alt' }">
+        <!--                                                                                                                               Homework -->
+        <mat-card-header style="padding: 0px">
+            <mat-card-title [innerHTML]="pageData?.title"> </mat-card-title>
+            <mat-card-subtitle [innerHTML]="pageData?.description"> </mat-card-subtitle>
+        </mat-card-header>
+    </mat-card>
+    <mat-card class="apptab" *appNavPage="{ name: 'Grades', id: 7, icon: 'task' }">
+        <!--                                                                                                                               Grades -->
         <mat-card-header>
             <mat-card-title> {{ pageData?.name }} </mat-card-title>
         </mat-card-header>
@@ -204,29 +216,72 @@
                 {{ clamp((gradeControl.value * (gradeInfo.totalWeight + weightControl.value) - gradeInfo.total) / weightControl.value) }}
             </mat-card-title>
         </ng-container>
+        <mat-chip-listbox #kolom>
+            <ng-container *ngFor="let item of koloms(pageData?.grades)">
+                <mat-chip-option [value]="item">{{ item }}</mat-chip-option>
+            </ng-container>
+        </mat-chip-listbox>
+        <mat-chip-listbox #year>
+            <ng-container *ngFor="let item of years(pageData?.grades)">
+                <mat-chip-option [value]="item">{{ item }}</mat-chip-option>
+            </ng-container>
+        </mat-chip-listbox>
+        <mat-chip-listbox #exam>
+            <mat-chip-option [value]="true">exam</mat-chip-option>
+            <mat-chip-option [value]="false">normal</mat-chip-option>
+        </mat-chip-listbox>
         <ng-container *ngFor="let item of pageData?.grades">
-            <mat-divider></mat-divider>
-            <mat-card-header>
-                <mat-card-title>
-                    {{ item.value }} {{ item.kolom }}
-                    {{ item.weight === 0 ? '' : item.weight }}
-                    {{ item.exam ? 'exam' : 'normal' }}
-                    {{
-                        item.date.toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        })
-                    }}
-                </mat-card-title>
-            </mat-card-header>
+            <ng-container
+                *ngIf="
+                    (kolom.value == item.kolom || kolom.value === undefined) &&
+                    (exam.value === undefined || item.exam == exam.value) &&
+                    (year.value === undefined || year.value == item.leerjaar)
+                "
+            >
+                <mat-divider></mat-divider>
+                <mat-card-header (click)="openPage({ id: 8, data: item })">
+                    <mat-card-title>
+                        {{ item.value }}
+                        {{ item.weight === 0 ? '' : '*' + item.weight.toString() }}
+                        {{ kolom.value === undefined ? item.kolom : '' }}
+                        {{ exam.value == undefined ? (item.exam ? 'exam' : 'normal') : '' }}
+                        jaar {{ item.leerjaar }}
+                    </mat-card-title>
+                    <mat-card-subtitle>
+                        {{
+                            item.date.toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            })
+                        }}
+                    </mat-card-subtitle>
+                </mat-card-header>
+            </ng-container>
         </ng-container>
         <mat-divider></mat-divider>
         <button #calcButton mat-raised-button (click)="calcOpen()" color="primary" style="width: fit-content" style="position: absolute; right: 0px">
             <mat-icon style="position: absolute; right: 3vw; top: 3vw">calculate</mat-icon>
         </button>
     </mat-card>
-    <mat-card class="apptab" *appNavPage="{ name: 'Message', id: 8, icon: 'chat' }"> </mat-card>
+    <mat-card class="apptab" *appNavPage="{ name: 'Grade', id: 8, icon: 'task' }">
+        <mat-card-header>
+            <mat-card-title>
+                {{ pageData?.value }} {{ pageData?.kolom }}
+                {{ pageData?.weight === 0 ? '' : pageData?.weight }}
+                {{ pageData?.exam ? 'exam' : 'normal' }}
+                {{
+                    pageData?.date.toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    })
+                }}
+                {{ pageData?.periode }} {{ pageData?.discriptor }} {{ pageData?.kolom }} {{ pageData?.type }}
+            </mat-card-title>
+        </mat-card-header>
+    </mat-card>
+    <mat-card class="apptab" *appNavPage="{ name: 'Message', id: 9, icon: 'chat' }"> </mat-card>
 </app-pages>
 <mat-icon
     (click)="openPage({ id: 4 })"

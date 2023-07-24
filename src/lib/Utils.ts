@@ -2,6 +2,10 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { GetResult, Preferences } from '@capacitor/preferences';
 import { catchError, EMPTY } from 'rxjs';
 import { Vak, resultaatType } from './Somtoday';
+import { DateAdapter, ErrorStateMatcher, NativeDateAdapter } from '@angular/material/core';
+import { AbstractControl, FormControl, FormGroupDirective, NgForm, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { Injectable } from '@angular/core';
+import { DateRange, MatDateRangeSelectionStrategy } from '@angular/material/datepicker';
 /**
  * Represents an object that can be saved to storage.
  */
@@ -52,7 +56,6 @@ export abstract class AskLogin {
         } else return this.access_token;
     }
     public access_token: Token = new Token();
-    public abstract name: string;
     /**
      * Tries to refresh the access token.
      * @returns A valid token.
@@ -76,10 +79,18 @@ export class Token {
     toString(): string {
         return '(' + this.value + ',' + this.expire_time + ')';
     }
+    /**
+     * @param expire_time The time at which the token becomes invalid.
+     * @param value The object to save.
+     */
     public async setValues(value: string, expire_time: number) {
         this._value = value;
         this.expire_time = expire_time;
     }
+    /**
+     * Copies an other token.
+     * @param t The token to copy.
+     */
     public async setValue(t: Token) {
         this._value = t._value;
         this.expire_time = t.expire_time;
@@ -87,6 +98,11 @@ export class Token {
     public get value(): string {
         return this._value;
     }
+    /**
+     * Checks if the token should currently be valid.
+     * @warning This doesn't check if the token was used (in case of refresh tokens)
+     * or if the provider thinks the token is valid (Somtoday seems to be realy bad at detecting out of date refresh tokens).
+     */
     public get isValid(): boolean {
         return new Date().getTime() < this.expire_time;
     }
@@ -109,7 +125,58 @@ export class JSONObject<T> implements Savable<T> {
         this.value = simple;
     }
 }
-
+/**
+ * Custom data adapter to get weeks going from monday to sunday and with the format: day month year. were month is correctly translated.
+ */
+export class AppDateAdapter extends NativeDateAdapter {
+    constructor(matDateLocale: string) {
+        super(matDateLocale);
+    }
+    override parse(value: any): Date | null {
+        throw new Error('Cant parse string.');
+    }
+    override format(date: Date, displayFormat: any): string {
+        return date.getDate() + ' ' + date.toLocaleString('default', { month: 'long' }) + ' ' + date.getFullYear();
+    }
+    override getFirstDayOfWeek(): number {
+        return 1;
+    }
+}
+/*
+export class ZermeloErrorStateMatcher implements ErrorStateMatcher {
+    isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
+        const isSubmitted = form && form.submitted;
+        return !!(control && control.invalid && (control.dirty || control.touched || isSubmitted));
+    }
+}
+export function RegexValidator(nameRe: RegExp): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+        const forbidden = nameRe.test(control.value);
+        return forbidden ? null : { zermelo: { value: control.value } };
+    };
+}
+*/
+@Injectable()
+export class WeekSelectionStrategy<D> implements MatDateRangeSelectionStrategy<D> {
+    constructor(private _dateAdapter: DateAdapter<D>) {}
+    selectionFinished(date: D | null): DateRange<D> {
+        return this._createFiveDayRange(date);
+    }
+    createPreview(activeDate: D | null): DateRange<D> {
+        return this._createFiveDayRange(activeDate);
+    }
+    private _createFiveDayRange(date: D | null): DateRange<D> {
+        if (date) {
+            let currentDay = this._dateAdapter.getDayOfWeek(date);
+            if (currentDay === 0) currentDay += 7;
+            const short = 2; //AppComponent.instance.dateType === 'semiWeek' ? 2 : 0;
+            const start = this._dateAdapter.addCalendarDays(date, 1 - currentDay);
+            const end = this._dateAdapter.addCalendarDays(date, 7 - currentDay - short);
+            return new DateRange<D>(start, end);
+        }
+        return new DateRange<D>(null, null);
+    }
+}
 /**
  * @param yearNum The year number.
  * @param weekNum The week number.
@@ -171,7 +238,7 @@ export class Lesson {
      * @param start The start of this lesson.
      * @param end The end of this lesson.
      */
-    constructor(teacher: string, subject: string, location: Location, start: Date, end: Date) {
+    constructor(title: string, description: string, teacher: string, subject: string, location: Location, start: Date, end: Date) {
         this.date = start;
         this.dayNumber = start.getDay() - 1;
         if (this.dayNumber === -1) this.dayNumber = 7;
@@ -181,6 +248,8 @@ export class Lesson {
         this.teacher = teacher;
         //this.homework = [];
         this.subject = subject;
+        this.title = title;
+        this.description = description;
     }
     date: Date;
     subject: string;
@@ -189,6 +258,8 @@ export class Lesson {
     location: Location;
     start: number;
     end: number;
+    title: string;
+    description: string;
     //title: string;
     //homework: Homework[];
 }
@@ -260,23 +331,16 @@ export function tryJSONParse(text: string): any | undefined {
  * @param headers The request headers. e.g. accept
  * @returns The object version of the JSON string.
  */
-export function request<T>(
-    client: HttpClient,
-    url: string,
-    method: 'GET' | 'PUT' | 'POST',
-    body: any,
-    params: HttpParams,
-    headers: HttpHeaders
-    /*onError: (err: { status: number; error: { message: string } }, resolve: (value: E | PromiseLike<E>) => void) => void*/
-): Promise<T> {
+export function request<T>(client: HttpClient, url: string, method: 'GET' | 'PUT' | 'POST', body: any, params: HttpParams, headers: HttpHeaders): Promise<T> {
     return new Promise((resolve, reject) => {
         client
             .request<T>(method, url, { responseType: 'json', params, body, headers })
             .pipe(
-                catchError((e, o) => {
+                catchError((e) => {
                     if (e.status === 0) {
                         alert("Can't connect to " + url + '. Check your wifi. ' + '\n' + JSON.stringify(e));
-                    } // else onError(e, resolve);
+                    }
+                    reject(e);
                     return EMPTY;
                 })
             )

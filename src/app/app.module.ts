@@ -25,6 +25,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 
+import { MatSelectModule } from '@angular/material/select';
+
 @NgModule({
     declarations: [AppComponent, PageComponent, NavPageDirective],
     imports: [
@@ -48,6 +50,7 @@ import { MatMenuModule } from '@angular/material/menu';
         MatIconModule,
         MatDialogModule,
         MatMenuModule,
+        MatSelectModule,
     ],
     providers: [],
     bootstrap: [AppComponent],

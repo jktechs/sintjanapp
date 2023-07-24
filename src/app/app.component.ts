@@ -1,65 +1,18 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Injectable, ViewChild, ViewContainerRef } from '@angular/core';
-import { AbstractControl, FormControl, FormGroupDirective, NgForm, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { DateAdapter, ErrorStateMatcher, MatRipple, MAT_DATE_LOCALE, NativeDateAdapter } from '@angular/material/core';
+import { FormControl } from '@angular/forms';
+import { DateAdapter, MatRipple, MAT_DATE_LOCALE } from '@angular/material/core';
 import { App } from '@capacitor/app';
-import { Homework, JSONObject, Lesson, Location, Savable, setVar, Subject, delay } from 'src/lib/Utils';
+import { Homework, JSONObject, Lesson, Location, Savable, setVar, Subject, AppDateAdapter, WeekSelectionStrategy, Grade } from 'src/lib/Utils';
 import { huiswerkResult, Somtoday, Vak } from 'src/lib/Somtoday';
 import { AppLauncher } from '@capacitor/app-launcher';
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { Browser } from '@capacitor/browser';
-import { MatDateRangeSelectionStrategy, DateRange, MAT_DATE_RANGE_SELECTION_STRATEGY } from '@angular/material/datepicker';
+import { MAT_DATE_RANGE_SELECTION_STRATEGY } from '@angular/material/datepicker';
 import { PageComponent, Page, LayoutType } from './pages/pages.component';
 import { Preferences } from '@capacitor/preferences';
 import { MatDialog } from '@angular/material/dialog';
 
-class AppDateAdapter extends NativeDateAdapter {
-    constructor(matDateLocale: string) {
-        super(matDateLocale);
-    }
-    override parse(value: any): Date | null {
-        throw new Error('Cant parse string.');
-    }
-    override format(date: Date, displayFormat: any): string {
-        return date.getDate() + ' ' + date.toLocaleString('default', { month: 'long' }) + ' ' + date.getFullYear();
-    }
-    override getFirstDayOfWeek(): number {
-        return 1;
-    }
-}
-class ZermeloErrorStateMatcher implements ErrorStateMatcher {
-    isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
-        const isSubmitted = form && form.submitted;
-        return !!(control && control.invalid && (control.dirty || control.touched || isSubmitted));
-    }
-}
-function ZermeloValidator(nameRe: RegExp): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-        const forbidden = nameRe.test(control.value);
-        return forbidden ? null : { zermelo: { value: control.value } };
-    };
-}
-@Injectable()
-export class WeekSelectionStrategy<D> implements MatDateRangeSelectionStrategy<D> {
-    constructor(private _dateAdapter: DateAdapter<D>) {}
-    selectionFinished(date: D | null): DateRange<D> {
-        return this._createFiveDayRange(date);
-    }
-    createPreview(activeDate: D | null): DateRange<D> {
-        return this._createFiveDayRange(activeDate);
-    }
-    private _createFiveDayRange(date: D | null): DateRange<D> {
-        if (date) {
-            let currentDay = this._dateAdapter.getDayOfWeek(date);
-            if (currentDay === 0) currentDay += 7;
-            const short = AppComponent.instance.dateType === 'semiWeek' ? 1 : 0;
-            const start = this._dateAdapter.addCalendarDays(date, 1 - currentDay);
-            const end = this._dateAdapter.addCalendarDays(date, 7 - currentDay - 2 * short);
-            return new DateRange<D>(start, end);
-        }
-        return new DateRange<D>(null, null);
-    }
-}
 type Site = {
     name: string;
     img: string;
@@ -75,12 +28,13 @@ type Wiget = {
     data: Site;
 };
 type Block = {
+    lesson: Lesson;
     w: number;
     h: number;
-    title: string;
-    location: string;
-    teacher: string;
-    time: string;
+    //title: string;
+    //location: string;
+    //teacher: string;
+    //time: string;
     left: number;
     top: number;
 };
@@ -110,12 +64,13 @@ export class AppComponent implements AfterContentChecked {
             return {
                 w: 1 / 5,
                 h: height,
-                title: lesson.subject,
-                location: lesson.location.toString(),
-                teacher: lesson.teacher,
+                //title: lesson.subject,
+                //location: lesson.location.toString(),
+                //teacher: lesson.teacher,
                 left,
                 top,
-                time: lesson.date.getHours() + ':' + lesson.date.getMinutes(),
+                //time: lesson.date.getHours() + ':' + lesson.date.getMinutes(),
+                lesson,
             };
         });
     }
@@ -166,8 +121,8 @@ export class AppComponent implements AfterContentChecked {
             });
         this.Object.values(this.subjects).forEach((x) => {
             x.grades.sort((a, b) => {
-                if (a.kolom === 'Toetskolom' || a.kolom === 'Werkstukcijferkolom') return -1;
-                if (b.kolom === 'Toetskolom' || b.kolom === 'Werkstukcijferkolom') return 1;
+                //if (a.kolom === 'Toetskolom' || a.kolom === 'Werkstukcijferkolom') return -1;
+                //if (b.kolom === 'Toetskolom' || b.kolom === 'Werkstukcijferkolom') return 1;
                 return a.date > b.date ? 1 : -1;
             });
         });
@@ -194,6 +149,8 @@ export class AppComponent implements AfterContentChecked {
         this.lessons = data.items.map(
             (i) =>
                 new Lesson(
+                    i.titel,
+                    i.omschrijving,
                     i.additionalObjects.docentAfkortingen,
                     i.additionalObjects.vak ? i.additionalObjects.vak.afkorting : i.titel,
                     new Location(i.locatie === undefined ? 'E000' : i.locatie),
@@ -201,6 +158,22 @@ export class AppComponent implements AfterContentChecked {
                     new Date(i.eindDatumTijd)
                 )
         );
+    }
+    koloms(grades: Grade[]) {
+        if (grades == undefined) return [];
+        let dupkoloms = grades.map((x) => x.kolom);
+        let koloms = dupkoloms.filter((element, index) => {
+            return dupkoloms.indexOf(element) === index;
+        });
+        return koloms;
+    }
+    years(grades: Grade[]) {
+        if (grades == undefined) return [];
+        let dupkoloms = grades.map((x) => x.leerjaar);
+        let koloms = dupkoloms.filter((element, index) => {
+            return dupkoloms.indexOf(element) === index;
+        });
+        return koloms;
     }
     public somtoday: Somtoday = new Somtoday(
         async () => {
@@ -218,7 +191,6 @@ export class AppComponent implements AfterContentChecked {
         () => this.openPage({ id: 4 })
     );
     homeworkCont = new FormControl(new Date(), { nonNullable: true });
-    //settings------------------------------------------------------------------------------------------------------------------------
     get appSites() {
         return this.wigets.filter((x) => x.data.formControl).map((x) => x.data.formControl) as FormControl<boolean>[];
     }
@@ -240,12 +212,14 @@ export class AppComponent implements AfterContentChecked {
         this.settings.value.menu = v;
         Savable.Save('settings', this.settings);
     }
-    zermeloFormControl = new FormControl('', [Validators.required, ZermeloValidator(new RegExp('(?:[0-9]{3} ?){4}'))]);
+    /*
+    zermeloFormControl = new FormControl('', [Validators.required, RegexValidator(new RegExp('(?:[0-9]{3} ?){4}'))]);
     matcher = new ZermeloErrorStateMatcher();
-    //@ViewChild('somCode') someInput?: ElementRef<HTMLInputElement>;
+    @ViewChild('somCode') someInput?: ElementRef<HTMLInputElement>;
     zermeloSubmit(e: SubmitEvent) {
         if (this.zermeloFormControl.valid) console.log(this.zermeloFormControl.value?.replaceAll(' ', ''));
     }
+    */
     public settings: JSONObject<{
         openApp: boolean[];
         menu: LayoutType;
@@ -255,9 +229,8 @@ export class AppComponent implements AfterContentChecked {
         menu: 'stretch',
         iconColor: 'white',
     });
-    //--------------------------------------------------------------------------------------------
     constructor(private http: HttpClient, private dialog: MatDialog, private viewRefrence: ViewContainerRef) {
-        setVar(this, 'This'); //#####################################################################
+        setVar(this, 'This');
         AppLauncher.canOpenUrl({ url: 'com.cijferroyale.CijferRoyale' }).then((x) => {
             if (x.value) {
                 this.wigets.push({
@@ -284,9 +257,6 @@ export class AppComponent implements AfterContentChecked {
                         this.settings.value.openApp[i] = v !== null ? v : false;
                         Savable.Save('settings', this.settings);
                     });
-                    //if(v.appLink !== undefined){
-                    //this.checked.push(fc);
-                    //}
                     index++;
                 });
             });
@@ -324,11 +294,8 @@ export class AppComponent implements AfterContentChecked {
             if (!this.pages?.back()) {
                 App.exitApp();
             }
-            //alert('back' + data.canGoBack);
-            //window.history.back();
         });
     }
-    //home--------------------------------------------------------------------------------------
     wigets: Wiget[] = [
         {
             x: 0,
@@ -413,7 +380,6 @@ export class AppComponent implements AfterContentChecked {
     @ViewChild('home', { read: ElementRef }) home?: ElementRef<HTMLElement>;
     gridSize: number = 3;
     spacing = '4vw';
-    //schedule----------------------------------------------------------------------------------------
     @ViewChild(MatRipple) ripple?: MatRipple;
     date = new FormControl(new Date());
     dateType: 'fullWeek' | 'semiWeek' | 'day' = 'semiWeek';
@@ -453,7 +419,6 @@ export class AppComponent implements AfterContentChecked {
         }
         this.lastClickOffset = e.offsetX;
     }
-    //---------------------------------------------------------------------------
     tabs = {
         names: ['Home', 'Grades', 'Class', 'Message'],
         visible: 2,
@@ -480,10 +445,11 @@ export class AppComponent implements AfterContentChecked {
         alert('No path available.');
         return;
     }
-    tryLogin(text?: string) {
-        let t = text ? text : '';
-        //if (this.someInput !== undefined) t = this.someInput.nativeElement.value;
-        this.somtoday.getCodeToken(t);
+    tryLogin(text: string) {
+        this.somtoday.getCodeToken(text);
+    }
+    setLogin(refresh: string) {
+        this.somtoday.getToken('refresh_token', refresh);
     }
     resetData() {
         Preferences.clear();
